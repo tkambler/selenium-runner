@@ -1,0 +1,17 @@
+{
+  "name": "selenium-runner",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Tim Ambler <tkambler@gmail.com> (http://bitcubby.com)",
+  "license": "ISC",
+  "dependencies": {
+    "wd-sync": "~1.2.5",
+    "underscore": "~1.6.0",
+    "glob": "~3.2.9",
+    "chai": "~1.9.1"
+  }
+}
