@@ -94,10 +94,9 @@ _.extend(SeleniumRunner.prototype, {
                             'message': e.message
                         });
                     }
+                    browser.quit();
                 });
             });
-
-            browser.quit();
 
             fn(results);
 
