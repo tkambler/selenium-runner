@@ -47,7 +47,7 @@ _.extend(SeleniumRunner.prototype, {
         }, this);
     },
 
-    'run': function(runType, url, fn) {
+    'run': function(runType, url, soloTest, fn) {
 
         var wdSync = require('wd-sync'),
             runOptions = this._options[runType],
@@ -69,30 +69,27 @@ _.extend(SeleniumRunner.prototype, {
             _.each(runOptions.browsers, function(browserSettings) {
                 _.each(steps, function(step) {
                     var test = require(step),
-                        baseName = path.basename(step).replace('.js', '');
+                        baseName = path.basename(step).replace('.js', '')
+                    if (soloTest && baseName !== soloTest) {
+                        return;
+                    }
                     if (!results[baseName]) {
                         results[baseName] = [];
                     }
                     browser.init(browserSettings);
-                    if (!browserSettings.browserName) {
-                        browserSettings.browserName = '';
-                    }
-                    if (!browserSettings.platform) {
-                        browserSettings.platform = '';
-                    }
                     browser.get(url);
                     try {
                         test(browser);
                         results[baseName].push({
-                            'browser': browserSettings.browserName,
-                            'platform': browserSettings.platform,
+                            'browser': browserSettings.browserName || '',
+                            'platform': browserSettings.platform || '',
                             'status': 'pass',
                             'message': ''
                         });
                     } catch(e) {
                         results[baseName].push({
-                            'browser': browserSettings.browserName,
-                            'platform': browserSettings.platform,
+                            'browser': browserSettings.browserName || '',
+                            'platform': browserSettings.platform || '',
                             'status': 'fail',
                             'message': e.message
                         });

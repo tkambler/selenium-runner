@@ -16,7 +16,7 @@ $ npm install selenium-test-runner
 var SeleniumRunner = require('selenium-test-runner'),
 	seleniumRunner,
 	settings;
-	
+
 settings = {
 	"local": {
 		"host": "127.0.0.1",
@@ -62,14 +62,22 @@ settings = {
 	"test_dir": "./tests",
 	"plugin_dir": "./plugins"
 };
-	
+
 seleniumRunner = new SeleniumRunner(settings);
-seleniumRunner.run(env, 'http://localhost:3000', function(result) {
+seleniumRunner.run(env, 'http://localhost:3000', null, function(result) {
     processResult(result);
     done();
 });
 
-seleniumRunner.run("local", "http://www.reddit.com", function(result) {
+seleniumRunner.run("local", "http://www.reddit.com", null, function(result) {
+	console.log(result);
+});
+```
+
+## Running a Specific Test
+
+```javascript
+seleniumRunner.run("local", "http://www.reddit.com", "TestName", function(result) {
 	console.log(result);
 });
 ```
