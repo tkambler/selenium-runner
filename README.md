@@ -2,12 +2,18 @@
 
 Selenium test runner for Node that uses fibers to create tests in a synchronous manner.
 
+# Installation
+
+```
+$ npm install selenium-test-runner
+```
+
 # Examples
 
 ## Instantiating the Test Runner
 
 ```javascript
-var SeleniumRunner = require('selenium-runner');
+var SeleniumRunner = require('selenium-test-runner');
 	
 var seleniumRunner = new SeleniumRunner({
     'host': 'ondemand.saucelabs.com',
