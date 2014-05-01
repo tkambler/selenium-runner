@@ -13,22 +13,63 @@ $ npm install selenium-test-runner
 ## Instantiating the Test Runner
 
 ```javascript
-var SeleniumRunner = require('selenium-test-runner');
+var SeleniumRunner = require('selenium-test-runner'),
+	seleniumRunner,
+	settings;
 	
-var seleniumRunner = new SeleniumRunner({
-    'host': 'ondemand.saucelabs.com',
-    'port': 80,
-    'username': 'username',
-    'access_key': 'access_key',
-    'test_dir': __dirname + '/tests',
-    'plugin_dir': __dirname + '/plugins'
+settings = {
+	"local": {
+		"host": "127.0.0.1",
+		"port": 4444,
+		"browsers": [
+			{
+				"browserName": "chrome"
+			}
+		]
+	},
+	"remote": {
+        'host': 'ondemand.saucelabs.com',
+        'port': 80,
+        'username': 'username',
+        'access_key': 'access_key',
+        'browsers': [
+            {
+                'platform': 'Windows 7',
+                'browserName': 'Internet Explorer',
+                'browserVersion': '9'
+            },
+            {
+                'platform': 'Windows 7',
+                'browserName': 'Internet Explorer',
+                'browserVersion': '10'
+            },
+            {
+                'platform': 'Windows 7',
+                'browserName': 'Internet Explorer',
+                'browserVersion': '11'
+            },
+            {
+                'platform': 'Windows 7',
+                'browserName': 'Chrome',
+                'browserVersion': '34'
+            },
+            {
+                'platform': 'Windows 7',
+                'browserName': 'Firefox',
+                'browserVersion': '28'
+            }
+	},
+	"test_dir": "./tests",
+	"plugin_dir": "./plugins"
+};
+	
+seleniumRunner = new SeleniumRunner(settings);
+seleniumRunner.run(env, 'http://localhost:3000', function(result) {
+    processResult(result);
+    done();
 });
 
-seleniumRunner.run("http://www.reddit.com", {
-	'platform': "XP",
-    'name': "example test",
-    'browserName': "chrome"
-}, function(result) {
+seleniumRunner.run("local", "http://www.reddit.com", function(result) {
 	console.log(result);
 });
 ```

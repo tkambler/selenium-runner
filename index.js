@@ -30,8 +30,6 @@ _.extend(SeleniumRunner.prototype, {
 
     '_parseOptions': function(options) {
         options = options || {};
-        _.defaults(options, {
-        });
         this._options = options;
     },
 
@@ -49,10 +47,11 @@ _.extend(SeleniumRunner.prototype, {
         }, this);
     },
 
-    'run': function(url, runOptions, fn) {
+    'run': function(runType, url, fn) {
 
         var wdSync = require('wd-sync'),
-            client = wdSync.remote(this._options.host, this._options.port, this._options.username, this._options.access_key),
+            runOptions = this._options[runType],
+            client = wdSync.remote(runOptions.host, runOptions.port, runOptions.username, runOptions.access_key),
             steps = this._getTestFiles(),
             browser = client.browser,
             self = this,
@@ -67,23 +66,38 @@ _.extend(SeleniumRunner.prototype, {
                 };
             });
 
-            _.each(steps, function(step) {
-                var test = require(step),
-                    baseName = path.basename(step).replace('.js', '');
-                browser.init(runOptions);
-                browser.get(url);
-                try {
-                    test(browser);
-                    results[baseName] = {
-                        'status': 'pass',
-                        'message': ''
-                    };
-                } catch(e) {
-                    results[baseName] = {
-                        'status': 'fail',
-                        'message': e.message
-                    };
-                }
+            _.each(runOptions.browsers, function(browserSettings) {
+                _.each(steps, function(step) {
+                    var test = require(step),
+                        baseName = path.basename(step).replace('.js', '');
+                    if (!results[baseName]) {
+                        results[baseName] = [];
+                    }
+                    browser.init(browserSettings);
+                    if (!browserSettings.browserName) {
+                        browserSettings.browserName = '';
+                    }
+                    if (!browserSettings.platform) {
+                        browserSettings.platform = '';
+                    }
+                    browser.get(url);
+                    try {
+                        test(browser);
+                        results[baseName].push({
+                            'browser': browserSettings.browserName,
+                            'platform': browserSettings.platform,
+                            'status': 'pass',
+                            'message': ''
+                        });
+                    } catch(e) {
+                        results[baseName].push({
+                            'browser': browserSettings.browserName,
+                            'platform': browserSettings.platform,
+                            'status': 'fail',
+                            'message': e.message
+                        });
+                    }
+                });
             });
 
             browser.quit();
