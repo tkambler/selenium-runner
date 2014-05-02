@@ -1,5 +1,6 @@
 var _ = require('underscore'),
     path = require('path'),
+    fs = require('fs'),
     glob = require('glob');
 
 /**
@@ -67,37 +68,15 @@ _.extend(SeleniumRunner.prototype, {
             });
 
             _.each(runOptions.browsers, function(browserSettings) {
-                _.each(steps, function(step) {
-                    var test = require(step),
-                        baseName = path.basename(step).replace('.js', '')
-                    if (soloTest && baseName !== soloTest) {
-                        return;
-                    }
-                    if (!results[baseName]) {
-                        results[baseName] = [];
-                    }
-                    browser.init(browserSettings);
-                    browser.get(url);
-                    try {
-                        test(browser);
-                        results[baseName].push({
-                            'browser': browserSettings.browserName || '',
-                            'platform': browserSettings.platform || '',
-                            'status': 'pass',
-                            'message': ''
-                        });
-                    } catch(e) {
-                        results[baseName].push({
-                            'browser': browserSettings.browserName || '',
-                            'platform': browserSettings.platform || '',
-                            'status': 'fail',
-                            'message': e.message
-                        });
-                    }
+                _.each(steps.tests, function(step) {
+                    this._processTest(step, url, soloTest, results, browser, browserSettings);
+                }, self);
+                _.each(steps.suites, function(suite) {
+                    _.each(suite.tests, function(step) {
+                        this._processTest(step, url, soloTest, results, browser, browserSettings, suite);
+                    }, self);
                 });
-            });
-
-            browser.quit();
+            }, self);
 
             fn(results);
 
@@ -105,8 +84,85 @@ _.extend(SeleniumRunner.prototype, {
 
     },
 
+    '_processTest': function(step, url, soloTest, results, browser, browserSettings, suite) {
+        var test = require(step),
+            baseName = path.basename(step).replace('.js', ''),
+            entry;
+        if (soloTest && baseName !== soloTest) {
+            return;
+        }
+        if (!suite) {
+            suite = {
+                'name': '_other'
+            };
+        }
+        browser.init(browserSettings);
+        browser.get(url);
+        try {
+            test(browser);
+            entry = {
+                'browser': browserSettings.browserName || '',
+                'platform': browserSettings.platform || '',
+                'status': 'pass',
+                'message': ''
+            };
+        } catch(e) {
+            entry = {
+                'browser': browserSettings.browserName || '',
+                'platform': browserSettings.platform || '',
+                'status': 'fail',
+                'message': e.message
+            };
+        }
+        if (suite) {
+            if (!results[suite.name]) {
+                results[suite.name] = {};
+            }
+            if (!results[suite.name][baseName]) {
+                results[suite.name][baseName] = [];
+            }
+            results[suite.name][baseName].push(entry);
+        } else {
+            if (!results[baseName]) {
+                results[baseName] = [];
+            }
+            results[baseName].push(entry);
+        }
+        browser.quit();
+    },
+
     '_getTestFiles': function() {
-        return glob.sync(path.resolve(this._options.test_dir) + '/*Test.js');
+        var result = {
+            'tests': glob.sync(path.resolve(this._options.test_dir) + '/*Test.js'),
+            'suites': this._getTestSuites()
+        };
+        return result;
+    },
+
+    '_getTestSuites': function() {
+        var testDir = path.resolve(this._options.test_dir),
+            files = fs.readdirSync(testDir),
+            suites = [];
+        _.each(files, function(file) {
+            if (file.indexOf('.') === 0) {
+                return;
+            }
+            if (file === '_other') {
+                throw 'The value `_other` cannot be used as a suite name.';
+            }
+            var suitePath = testDir + '/' + file,
+                stat = fs.statSync(suitePath);
+            if (stat.isDirectory()) {
+                var suite = {
+                    'name': path.basename(suitePath),
+                    'tests': glob.sync(suitePath + '/*Test.js')
+                };
+                if (!_.isEmpty(suite.tests)) {
+                    suites.push(suite);
+                }
+            }
+        });
+        return suites;
     },
 
     '_getPluginFiles': function(dir) {
