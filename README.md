@@ -118,6 +118,11 @@ $ npm install selenium-test-runner
 
 [Download Selenium](http://docs.seleniumhq.org/) or sign up for a third-party service such as [Sauce Labs](https://saucelabs.com/).
 
+# Special Thanks To
+
+* [node-fibers](https://github.com/laverdet/node-fibers)
+* [wd-sync](https://github.com/sebv/node-wd-sync)
+
 # License
 
 The MIT License (MIT)
