@@ -1,80 +1,77 @@
-# Selenium Runner
+# What is this?
 
-Selenium test runner for Node that uses fibers to create tests in a synchronous manner.
+> "No callbacks. No promise chains. Just pure and simple clarity."
 
-# Installation
+This library provides a simple, repeatable pattern for writing and running [Selenium](http://docs.seleniumhq.org/) tests within Node that are **synchronous** in nature. No callbacks. No promise chains. Just pure and simple clarity.
 
-```
-$ npm install selenium-test-runner
-```
+# What is Selenium?
+
+Selenium is an open-source platform that allows you to write tests that mimic real-world user interactions within a web application. Selenium accomplishes this by creating instances of real web browsers, such as Chrome, Firefox, and Internet Explorer. The tests that are written for Selenium instruct these browsers to perform one or more actions (e.g. "click this button," "fill out this form field"), at which point a certain result is verified to meet some pre-defined criteria.
+
+The automated feedback provided by Selenium is quite useful, but if you're going to make extensive use of it, you should take great pains to ensure that your tests are both easy to write and easy to maintain. Fail to do so, and you'll quickly find yourself spending a majority of your time tweaking tests and a minority of your time actually creating a product.
 
 # Examples
 
-## Instantiating the Test Runner
+In the following example, we:
+
+* Define a Selenium host that will run our test suite
+* Define an array of browsers against which the tests will be run
+* Specify the path to a folder of [test scripts](#tests). These scripts must follow a naming convention of `*Test.js`. These scripts can also be grouped within subfolders in order to create suites of related tests.
+* Specify the path to a folder of [plugin scripts](#plugins). These scripts allow us to define custom actions that we can call within the browser. For example: You could define a plugin that allows you to quickly highlight the text contained within a specific element.
+
+## Running a Test Suite Locally
 
 ```javascript
-var SeleniumRunner = require('selenium-test-runner'),
-	seleniumRunner,
-	settings;
+var SeleniumRunner = require("selenium-test-runner");
 
-settings = {
+var runner = new SeleniumRunner({
 	"local": {
 		"host": "127.0.0.1",
 		"port": 4444,
 		"browsers": [
 			{
-				"browserName": "chrome"
+				"browserName": "Chrome"
 			}
 		]
 	},
-	"remote": {
-        'host': 'ondemand.saucelabs.com',
-        'port': 80,
-        'username': 'username',
-        'access_key': 'access_key',
-        'browsers': [
-            {
-                'platform': 'Windows 7',
-                'browserName': 'Internet Explorer',
-                'browserVersion': '9'
-            },
-            {
-                'platform': 'Windows 7',
-                'browserName': 'Internet Explorer',
-                'browserVersion': '10'
-            },
-            {
-                'platform': 'Windows 7',
-                'browserName': 'Internet Explorer',
-                'browserVersion': '11'
-            },
-            {
-                'platform': 'Windows 7',
-                'browserName': 'Chrome',
-                'browserVersion': '34'
-            },
-            {
-                'platform': 'Windows 7',
-                'browserName': 'Firefox',
-                'browserVersion': '28'
-            }
-	},
-	"test_dir": "./tests",
-	"plugin_dir": "./plugins"
-};
-
-seleniumRunner = new SeleniumRunner(settings);
-seleniumRunner.run(env, 'http://localhost:3000', null, function(result) {
-    processResult(result);
-    done();
+    "test_dir": "./tests"
+    "plugin_dir": "./plugins"
 });
 
-seleniumRunner.run("local", "http://www.reddit.com", null, function(result) {
+seleniumRunner.run("local", "http://mysite.com", null, function(result) {
+	console.log(result);
+});
+```
+
+## Running a Test Suite with Sauce Labs
+
+```javascript
+var SeleniumRunner = require("selenium-test-runner");
+
+var runner = new SeleniumRunner({
+	"sauce": {
+		"host": "ondemand.saucelabs.com",
+		"port": 80,
+		"username": "username",
+		"access_key": "access_key",
+		"browsers": [
+			{
+				"platform": "Windows 7"
+				"browserName": "Chrome",
+				"browserVersion": "34"
+			}
+		]
+	}
+});
+
+seleniumRunner.run("sauce", "http://mysite.com", null, function(result) {
 	console.log(result);
 });
 ```
 
 ## Running a Specific Test
+
+The `run` method takes an optional third parameter - the name of a specific test within your `tests` directory. If specified, the runner will only run that specific test.
 
 ```javascript
 seleniumRunner.run("local", "http://www.reddit.com", "TestName", function(result) {
@@ -82,7 +79,10 @@ seleniumRunner.run("local", "http://www.reddit.com", "TestName", function(result
 });
 ```
 
+<a name="tests"></a>
 ## Defining a Test
+
+Use whatever assertion library you prefer within your tests. In the following example, we use [Chai](http://chaijs.com/).
 
 ```javascript
 module.exports = function(browser) {
@@ -92,6 +92,7 @@ module.exports = function(browser) {
 };
 ```
 
+<a name="plugins"></a>
 ## Defining a Plugin
 
 With the following plugin in place, it would then be possible to call `browser.myPlugin()` in the previous example.
@@ -106,6 +107,16 @@ module.exports = {
 	}
 };
 ```
+
+# Installation
+
+```
+$ npm install selenium-test-runner
+```
+
+# How do I run Selenium?
+
+[Download Selenium](http://docs.seleniumhq.org/) or sign up for a third-party service such as [Sauce Labs](https://saucelabs.com/).
 
 # License
 
