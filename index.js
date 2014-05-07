@@ -38,6 +38,7 @@ _.extend(SeleniumRunner.prototype, {
     '_loadPlugins': function(dir) {
         var pluginFiles = this._getPluginFiles(dir),
             wd = require('./node_modules/wd-sync/node_modules/wd/lib/main');
+        global.wd = wd;
         _.each(pluginFiles, function(plugin) {
             plugin = require(plugin);
             if (this._pluginNames.indexOf(plugin.name) >= 0) {
