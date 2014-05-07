@@ -105,7 +105,7 @@ _.extend(SeleniumRunner.prototype, {
             steps.suites._other = _other;
 
             _.each(runOptions.browsers, function(browserSettings) {
-                self._log('Testing with browser: ' + _.values(browserSettings).join(', '));
+                self._log('   Testing with browser: ' + _.values(browserSettings).join(', '));
                 _.each(steps.suites, function(suite) {
                     _.each(suite.tests, function(step) {
                         this._processTest(step, runOptions.url, soloTest, results, browser, browserSettings, suite);
@@ -128,12 +128,12 @@ _.extend(SeleniumRunner.prototype, {
         if (soloTest && baseName !== soloTest) {
             return;
         }
-        this._log('Running test: ' + baseName);
+        this._log('      Running test: ' + baseName);
         browser.init(browserSettings);
         browser.get(url);
         try {
             test(browser);
-            this._log('Status: Pass'.green);
+            this._log('         Status: Pass'.green);
             entry = {
                 'browser': browserSettings.browserName || '',
                 'platform': browserSettings.platform || '',
@@ -141,7 +141,7 @@ _.extend(SeleniumRunner.prototype, {
                 'message': ''
             };
         } catch(e) {
-            var msg = 'Status: Fail - ' + e.message;
+            var msg = '         Status: Fail - ' + e.message;
             this._log(msg.red);
             entry = {
                 'browser': browserSettings.browserName || '',
