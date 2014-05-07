@@ -1,6 +1,7 @@
 var _ = require('underscore'),
     path = require('path'),
     fs = require('fs'),
+    colors = require('colors'),
     glob = require('glob');
 
 /**
@@ -48,7 +49,30 @@ _.extend(SeleniumRunner.prototype, {
         }, this);
     },
 
-    'run': function(runType, url, soloTest, fn) {
+    'run': function(runType, soloTest, debug, fn) {
+
+        if (_.isUndefined(soloTest)) {
+            soloTest = null;
+            debug = true;
+            fn = null;
+        } else {
+            if (_.isFunction(soloTest)) {
+                fn = soloTest;
+                soloTest = null;
+                debug = true;
+            } else {
+                if (_.isFunction(debug)) {
+                    fn = debug;
+                    debug = true;
+                } else {
+                    if (!_.isBoolean(debug)) {
+                        debug = true;
+                    }
+                }
+            }
+        }
+
+        this._options.debug = debug;
 
         var wdSync = require('wd-sync'),
             runOptions = this._options[runType],
@@ -59,6 +83,8 @@ _.extend(SeleniumRunner.prototype, {
             results = {},
             sync = client.sync;
 
+        this._log('Running tests with environment `' + runType + '` at url: ' + runOptions.url);
+
         sync(function() {
 
             _.each(self._plugins, function(fn, name) {
@@ -67,18 +93,28 @@ _.extend(SeleniumRunner.prototype, {
                 };
             });
 
+            var _other = [];
+            _.each(steps, function(v, k) {
+                if (k === 'suites') {
+                    return;
+                }
+                _other.push(v);
+                delete steps[k];
+            });
+            steps.suites._other = _other;
+
             _.each(runOptions.browsers, function(browserSettings) {
-                _.each(steps.tests, function(step) {
-                    this._processTest(step, url, soloTest, results, browser, browserSettings);
-                }, self);
+                self._log('Testing with browser: ' + _.values(browserSettings).join(', '));
                 _.each(steps.suites, function(suite) {
                     _.each(suite.tests, function(step) {
-                        this._processTest(step, url, soloTest, results, browser, browserSettings, suite);
+                        this._processTest(step, runOptions.url, soloTest, results, browser, browserSettings, suite);
                     }, self);
                 });
             }, self);
 
-            fn(results);
+            if (_.isFunction(fn)) {
+                fn(results);
+            }
 
         });
 
@@ -91,15 +127,12 @@ _.extend(SeleniumRunner.prototype, {
         if (soloTest && baseName !== soloTest) {
             return;
         }
-        if (!suite) {
-            suite = {
-                'name': '_other'
-            };
-        }
+        this._log('Running test: ' + baseName);
         browser.init(browserSettings);
         browser.get(url);
         try {
             test(browser);
+            this._log('Status: Pass'.green);
             entry = {
                 'browser': browserSettings.browserName || '',
                 'platform': browserSettings.platform || '',
@@ -107,6 +140,8 @@ _.extend(SeleniumRunner.prototype, {
                 'message': ''
             };
         } catch(e) {
+            var msg = 'Status: Fail - ' + e.message;
+            this._log(msg.red);
             entry = {
                 'browser': browserSettings.browserName || '',
                 'platform': browserSettings.platform || '',
@@ -114,20 +149,13 @@ _.extend(SeleniumRunner.prototype, {
                 'message': e.message
             };
         }
-        if (suite) {
-            if (!results[suite.name]) {
-                results[suite.name] = {};
-            }
-            if (!results[suite.name][baseName]) {
-                results[suite.name][baseName] = [];
-            }
-            results[suite.name][baseName].push(entry);
-        } else {
-            if (!results[baseName]) {
-                results[baseName] = [];
-            }
-            results[baseName].push(entry);
+        if (!results[suite.name]) {
+            results[suite.name] = {};
         }
+        if (!results[suite.name][baseName]) {
+            results[suite.name][baseName] = [];
+        }
+        results[suite.name][baseName].push(entry);
         browser.quit();
     },
 
@@ -172,6 +200,17 @@ _.extend(SeleniumRunner.prototype, {
             dir = path.resolve(this._options.plugin_dir) + '/*.js';
         }
         return glob.sync(dir);
+    },
+
+    '_log': function() {
+        var args = _.toArray(arguments);
+        if (!this._options.debug || _.isEmpty(args)) {
+            return;
+        }
+        if (args.length === 1) {
+            args = args[0];
+        }
+        console.log(args);
     }
 
 });

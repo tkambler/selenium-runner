@@ -14,6 +14,7 @@ The automated feedback provided by Selenium is quite useful, but if you're going
 
 In the following example, we:
 
+* Define the initial URL that our test browser will load.
 * Define a Selenium host that will run our test suite
 * Define an array of browsers against which the tests will be run
 * Specify the path to a folder of [test scripts](#tests). These scripts must follow a naming convention of `*Test.js`. These scripts can also be grouped within subfolders in order to create suites of related tests.
@@ -26,6 +27,7 @@ var SeleniumRunner = require("selenium-test-runner");
 
 var runner = new SeleniumRunner({
 	"local": {
+		"url": "http://mysite.com",
 		"host": "127.0.0.1",
 		"port": 4444,
 		"browsers": [
@@ -38,8 +40,13 @@ var runner = new SeleniumRunner({
     "plugin_dir": "./plugins"
 });
 
-seleniumRunner.run("local", "http://mysite.com", null, function(result) {
-	console.log(result);
+/**
+ * By default, test results are printed to the console as they become available.
+ * The callback function that we define here will be called once all tests have
+ * finished running.
+ */
+seleniumRunner.run("local", function(result) {
+	// ...
 });
 ```
 
@@ -50,6 +57,7 @@ var SeleniumRunner = require("selenium-test-runner");
 
 var runner = new SeleniumRunner({
 	"sauce": {
+		"url": "http://mysite.com",
 		"host": "ondemand.saucelabs.com",
 		"port": 80,
 		"username": "username",
@@ -64,7 +72,7 @@ var runner = new SeleniumRunner({
 	}
 });
 
-seleniumRunner.run("sauce", "http://mysite.com", null, function(result) {
+seleniumRunner.run("sauce", function(result) {
 	console.log(result);
 });
 ```
@@ -74,8 +82,8 @@ seleniumRunner.run("sauce", "http://mysite.com", null, function(result) {
 The `run` method takes an optional third parameter - the name of a specific test within your `tests` directory. If specified, the runner will only run that specific test.
 
 ```javascript
-seleniumRunner.run("local", "http://www.reddit.com", "TestName", function(result) {
-	console.log(result);
+seleniumRunner.run("local", "TestName", null, function(result) {
+	// ...
 });
 ```
 
