@@ -1,18 +1,34 @@
 {
   "name": "selenium-test-runner",
-  "version": "0.1.2",
-  "description": "",
+  "version": "0.2.0",
+  "description": "> \"No callbacks. No promise chains. Just pure and simple clarity.\"",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "Tim Ambler <tkambler@gmail.com> (http://bitcubby.com)",
+  "author": {
+    "name": "Tim Ambler",
+    "email": "tkambler@gmail.com",
+    "url": "http://bitcubby.com"
+  },
   "license": "ISC",
   "dependencies": {
     "wd-sync": "~1.2.5",
     "underscore": "~1.6.0",
     "glob": "~3.2.9",
     "chai": "~1.9.1",
-    "colors": "~0.6.2"
-  }
+    "colors": "~0.6.2",
+    "progress": "~1.1.5",
+    "pace": "0.0.4",
+    "moment": "^2.6.0",
+    "prettyjson": "~1.0.0"
+  },
+  "readme": "# What is this?\n\n> \"No callbacks. No promise chains. Just pure and simple clarity.\"\n\nThis library provides a simple, repeatable pattern for writing and running [Selenium](http://docs.seleniumhq.org/) tests within Node that are **synchronous** in nature. No callbacks. No promise chains. Just pure and simple clarity.\n\n# What is Selenium?\n\nSelenium is an open-source platform that allows you to write tests that mimic real-world user interactions within a web application. Selenium accomplishes this by creating instances of real web browsers, such as Chrome, Firefox, and Internet Explorer. The tests that are written for Selenium instruct these browsers to perform one or more actions (e.g. \"click this button,\" \"fill out this form field\"), at which point a certain result is verified to meet some pre-defined criteria.\n\nThe automated feedback provided by Selenium is quite useful, but if you're going to make extensive use of it, you should take great pains to ensure that your tests are both easy to write and easy to maintain. Fail to do so, and you'll quickly find yourself spending a majority of your time tweaking tests and a minority of your time actually creating a product.\n\n# Examples\n\nIn the following example, we:\n\n* Define the initial URL that our test browser will load.\n* Define a Selenium host that will run our test suite\n* Define an array of browsers against which the tests will be run\n* Specify the path to a folder of [test scripts](#tests). These scripts must follow a naming convention of `*Test.js`. These scripts can also be grouped within subfolders in order to create suites of related tests.\n* Specify the path to a folder of [plugin scripts](#plugins). These scripts allow us to define custom actions that we can call within the browser. For example: You could define a plugin that allows you to quickly highlight the text contained within a specific element.\n\n## Running a Test Suite Locally\n\n```javascript\nvar SeleniumRunner = require(\"selenium-test-runner\");\n\nvar runner = new SeleniumRunner({\n\t\"local\": {\n\t\t\"url\": \"http://mysite.com\",\n\t\t\"host\": \"127.0.0.1\",\n\t\t\"port\": 4444,\n\t\t\"browsers\": [\n\t\t\t{\n\t\t\t\t\"browserName\": \"Chrome\"\n\t\t\t}\n\t\t]\n\t},\n    \"test_dir\": \"./tests\"\n    \"plugin_dir\": \"./plugins\"\n});\n\n/**\n * By default, test results are printed to the console as they become available.\n * The callback function that we define here will be called once all tests have\n * finished running.\n */\nseleniumRunner.run(\"local\", function(result) {\n\t// ...\n});\n```\n\n## Running a Test Suite with Sauce Labs\n\n```javascript\nvar SeleniumRunner = require(\"selenium-test-runner\");\n\nvar runner = new SeleniumRunner({\n\t\"sauce\": {\n\t\t\"url\": \"http://mysite.com\",\n\t\t\"host\": \"ondemand.saucelabs.com\",\n\t\t\"port\": 80,\n\t\t\"username\": \"username\",\n\t\t\"access_key\": \"access_key\",\n\t\t\"browsers\": [\n\t\t\t{\n\t\t\t\t\"platform\": \"Windows 7\"\n\t\t\t\t\"browserName\": \"Chrome\",\n\t\t\t\t\"browserVersion\": \"34\"\n\t\t\t}\n\t\t]\n\t}\n});\n\nseleniumRunner.run(\"sauce\", function(result) {\n\tconsole.log(result);\n});\n```\n\n## Running a Specific Test\n\nThe `run` method takes an optional third parameter - the name of a specific test within your `tests` directory. If specified, the runner will only run that specific test.\n\n```javascript\nseleniumRunner.run(\"local\", \"TestName\", null, function(result) {\n\t// ...\n});\n```\n\n<a name=\"tests\"></a>\n## Defining a Test\n\nUse whatever assertion library you prefer within your tests. In the following example, we use [Chai](http://chaijs.com/).\n\n```javascript\nmodule.exports = function(browser) {\n    var assert = require(\"chai\").assert;\n    browser.sleep(4000);\n    assert.equal(browser.title(), 'reddit: the front page of the internet');\n};\n```\n\n<a name=\"plugins\"></a>\n## Defining a Plugin\n\nWith the following plugin in place, it would then be possible to call `browser.myPlugin()` in the previous example.\n\n```javascript\nmodule.exports = {\n\t'name': 'myPlugin',\n\t'fn': function(options) {\n\t\t// this.doSomething() === browser.doSomething() in the previous example.\n\t\tvar result = true;\n\t\treturn result;\n\t}\n};\n```\n\n# Installation\n\n```\n$ npm install selenium-test-runner\n```\n\n# How do I run Selenium?\n\n[Download Selenium](http://docs.seleniumhq.org/) or sign up for a third-party service such as [Sauce Labs](https://saucelabs.com/).\n\n# Special Thanks To\n\n* [node-fibers](https://github.com/laverdet/node-fibers)\n* [wd-sync](https://github.com/sebv/node-wd-sync)\n\n# License\n\nThe MIT License (MIT)\n\nCopyright (c) 2014 Tim Ambler\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE.\n",
+  "readmeFilename": "README.md",
+  "_id": "selenium-test-runner@0.1.2",
+  "dist": {
+    "shasum": "8c32e78f021bf612c3f8758c09cc5d3a2ea39bb6"
+  },
+  "_from": "selenium-test-runner@0.1.2",
+  "_resolved": "https://registry.npmjs.org/selenium-test-runner/-/selenium-test-runner-0.1.2.tgz"
 }

@@ -46,7 +46,7 @@ var runner = new SeleniumRunner({
  * finished running.
  */
 seleniumRunner.run("local", function(result) {
-	// ...
+    console.log(result);
 });
 ```
 

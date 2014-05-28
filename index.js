@@ -1,7 +1,8 @@
 var _ = require('underscore'),
     path = require('path'),
     fs = require('fs'),
-    colors = require('colors'),
+    moment = require('moment'),
+    Pace = require('pace'),
     glob = require('glob');
 
 /**
@@ -50,73 +51,94 @@ _.extend(SeleniumRunner.prototype, {
         }, this);
     },
 
-    'run': function(runType, soloTest, debug, fn) {
+    /**
+     * Runs defined Selenium tests.
+     *
+     * @param {String} runType - The test suite to be run.
+     * @param {String} soloTest - Optional. The name of a single, specific test to be run.
+     * @param {Boolean} debug - Optional. Defaults to true. Whether or not to log test results to the console as they are ready.
+     * @param {Function} fn - Callback function to be called once the test run is complete.
+     */
+    'run': function(runType, soloTest, fn) {
 
-        if (_.isUndefined(soloTest)) {
+        this._options.debug = false;
+
+        if (_.isFunction(soloTest)) {
+            fn = soloTest;
             soloTest = null;
-            debug = true;
-            fn = null;
-        } else {
-            if (_.isFunction(soloTest)) {
-                fn = soloTest;
-                soloTest = null;
-                debug = true;
-            } else {
-                if (_.isFunction(debug)) {
-                    fn = debug;
-                    debug = true;
-                } else {
-                    if (!_.isBoolean(debug)) {
-                        debug = true;
-                    }
-                }
-            }
         }
 
-        this._options.debug = debug;
+        var start_ts = moment().unix();
 
         var wdSync = require('wd-sync'),
             runOptions = this._options[runType],
-            client = wdSync.remote(runOptions.host, runOptions.port, runOptions.username, runOptions.access_key),
             steps = this._getTestFiles(),
-            browser = client.browser,
             self = this,
-            results = {},
-            sync = client.sync;
+            results = {};
 
         this._log('Running tests with environment `' + runType + '` at url: ' + runOptions.url);
 
-        sync(function() {
-
-            _.each(self._plugins, function(fn, name) {
-                browser[name] = function() {
-                    return fn.apply(browser, arguments);
-                };
-            });
-
-            var _other = [];
-            _.each(steps, function(v, k) {
-                if (k === 'suites') {
-                    return;
-                }
-                _other.push(v);
-                delete steps[k];
-            });
-            steps.suites._other = _other;
-
-            _.each(runOptions.browsers, function(browserSettings) {
-                self._log('   Testing with browser: ' + _.values(browserSettings).join(', '));
-                _.each(steps.suites, function(suite) {
-                    _.each(suite.tests, function(step) {
-                        this._processTest(step, runOptions.url, soloTest, results, browser, browserSettings, suite);
-                    }, self);
-                });
-            }, self);
-
-            if (_.isFunction(fn)) {
-                fn(results);
+        var _other = [];
+        _.each(steps, function(v, k) {
+            if (k === 'suites') {
+                return;
             }
+            _other.push(v);
+            delete steps[k];
+        });
+        steps.suites._other = _other;
 
+        var totalTestCount = 0,
+            totalBrowserCount = 0;
+        _.each(runOptions.browsers, function(browserSettings) {
+            totalBrowserCount++;
+            _.each(steps.suites, function(suite) {
+                _.each(suite.tests, function(step) {
+                    totalTestCount++;
+                });
+            });
+        });
+
+        var done = function() {
+            var end_ts = moment().unix(),
+                diff = end_ts - start_ts,
+                elapsed = moment.duration(end_ts - start_ts).humanize();
+            var finalResult = {
+                'total_tests': totalTestCount,
+                'total_browsers': totalBrowserCount,
+                'elapsed_time': elapsed,
+                'results': results
+            };
+            if (_.isFunction(fn)) {
+                fn(finalResult);
+            }
+        };
+
+        var pace = Pace(totalTestCount);
+
+        var testCounter = 0;
+        _.each(runOptions.browsers, function(browserSettings) {
+            // self._log('   Testing with browser: ' + _.values(browserSettings).join(', '));
+            _.each(steps.suites, function(suite) {
+                _.each(suite.tests, function(step) {
+                    var client = wdSync.remote(runOptions.host, runOptions.port, runOptions.username, runOptions.access_key),
+                        browser = client.browser,
+                        sync = client.sync;
+                    _.each(self._plugins, function(fn, name) {
+                        browser[name] = function() {
+                            return fn.apply(browser, arguments);
+                        };
+                    });
+                    sync(function() {
+                        self._processTest(step, runOptions.url, soloTest, results, browser, browserSettings, suite);
+                        pace.op();
+                        testCounter++;
+                        if (testCounter === totalTestCount) {
+                            done();
+                        }
+                    });
+                });
+            });
         });
 
     },
@@ -128,27 +150,39 @@ _.extend(SeleniumRunner.prototype, {
         if (soloTest && baseName !== soloTest) {
             return;
         }
-        this._log('      Running test: ' + baseName);
+        // this._log('      Running test: ' + baseName);
         browser.init(browserSettings);
         browser.get(url);
         try {
             test(browser);
-            this._log('         Status: Pass'.green);
+            // this._log('         Status: Pass'.green);
             entry = {
-                'browser': browserSettings.browserName || '',
                 'platform': browserSettings.platform || '',
+                'browser': browserSettings.browserName || '',
+                'browserVersion': browserSettings.browserVersion || '',
                 'status': 'pass',
                 'message': ''
             };
+            var screenshot_filename = entry.browser + '_' + entry.platform + '_' + baseName + '_success.png';
+            screenshot_filename = screenshot_filename.replace(' ', '_');
+            if (!_.isUndefined(this._options.screenshot_failed_tests) && this._options.screenshot_failed_tests === true && this._options.screenshots_path) {
+                browser.saveScreenshot(this._options.screenshots_path + '/' + screenshot_filename);
+            }
         } catch(e) {
             var msg = '         Status: Fail - ' + e.message;
-            this._log(msg.red);
+            // this._log(msg.red);
             entry = {
-                'browser': browserSettings.browserName || '',
                 'platform': browserSettings.platform || '',
+                'browser': browserSettings.browserName || '',
+                'browserVersion': browserSettings.browserVersion || '',
                 'status': 'fail',
                 'message': e.message
             };
+            var screenshot_filename = entry.browser + '_' + entry.platform + '_' + baseName + '_fail.png';
+            screenshot_filename = screenshot_filename.replace(' ', '_');
+            if (!_.isUndefined(this._options.screenshot_failed_tests) && this._options.screenshot_failed_tests === true && this._options.screenshots_path) {
+                browser.saveScreenshot(this._options.screenshots_path + '/' + screenshot_filename);
+            }
         }
         if (!results[suite.name]) {
             results[suite.name] = {};
