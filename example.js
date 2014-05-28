@@ -8,7 +8,7 @@ seleniumRunner = new SeleniumRunner({
         'host': 'ondemand.saucelabs.com',
         'port': 80,
         'username': null,
-        'access_key': null,
+        'access_key': null
         'browsers': [
             {
                 'platform': 'Windows 7',
@@ -22,7 +22,8 @@ seleniumRunner = new SeleniumRunner({
     'sauce': {
         'username': null,
         'password': null
-    }
+    },
+    'max_sessions': 2
 });
 
 seleniumRunner.run('local', function(result) {

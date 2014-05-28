@@ -1,6 +1,6 @@
 {
   "name": "selenium-test-runner",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "> \"No callbacks. No promise chains. Just pure and simple clarity.\"",
   "main": "index.js",
   "scripts": {

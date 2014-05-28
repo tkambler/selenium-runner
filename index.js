@@ -35,6 +35,9 @@ _.extend(SeleniumRunner.prototype, {
 
     '_parseOptions': function(options) {
         options = options || {};
+        if (!options.max_sessions) {
+            options.max_sessions = 1;
+        }
         this._options = options;
     },
 
@@ -160,6 +163,8 @@ _.extend(SeleniumRunner.prototype, {
 
         var pace = Pace(totalTestCount);
 
+        var testTasks = [];
+
         var testCounter = 0;
         _.each(runOptions.browsers, function(browserSettings) {
             // self._log('   Testing with browser: ' + _.values(browserSettings).join(', '));
@@ -173,16 +178,22 @@ _.extend(SeleniumRunner.prototype, {
                             return fn.apply(browser, arguments);
                         };
                     });
-                    sync(function() {
-                        self._processTest(step, runOptions.url, soloTest, results, browser, browserSettings, suite);
-                        pace.op();
-                        testCounter++;
-                        if (testCounter === totalTestCount) {
-                            done();
-                        }
+                    testTasks.push(function(cb) {
+                        sync(function() {
+                            self._processTest(step, runOptions.url, soloTest, results, browser, browserSettings, suite);
+                            pace.op();
+                            testCounter++;
+                            cb();
+                        });
                     });
                 });
             });
+        });
+
+        async.parallelLimit(testTasks, self._options.max_sessions, function(err, data) {
+            if (testCounter === totalTestCount) {
+                done();
+            }
         });
 
     },
@@ -198,6 +209,7 @@ _.extend(SeleniumRunner.prototype, {
         // this._log('      Running test: ' + baseName);
         browser.init(browserSettings);
         browser.get(url);
+        var status = 'failed';
         try {
             test(browser);
             // this._log('         Status: Pass'.green);
@@ -213,6 +225,7 @@ _.extend(SeleniumRunner.prototype, {
             if (!_.isUndefined(this._options.screenshot_failed_tests) && this._options.screenshot_failed_tests === true && this._options.screenshots_path) {
                 browser.saveScreenshot(this._options.screenshots_path + '/' + screenshot_filename);
             }
+            status = 'passed';
         } catch(e) {
             var msg = '         Status: Fail - ' + e.message;
             // this._log(msg.red);
@@ -243,6 +256,9 @@ _.extend(SeleniumRunner.prototype, {
 
         if (self.api) {
             entry.session_id = browser.getSessionId();
+            self.api.updateJob(entry.session_id, {
+            }, function() {
+            });
             done();
         } else {
             done();
@@ -318,6 +334,63 @@ _.extend(SeleniumRunner.prototype, {
 
     '_generateTestName': function() {
         return 'test_' + moment().unix() + '_' + randomString();
+    },
+
+    '_array_chunk': function(input, size, preserve_keys) {
+
+      //  discuss at: http://phpjs.org/functions/array_chunk/
+      // original by: Carlos R. L. Rodrigues (http://www.jsfromhell.com)
+      // improved by: Brett Zamir (http://brett-zamir.me)
+      //        note: Important note: Per the ECMAScript specification, objects may not always iterate in a predictable order
+      //   example 1: array_chunk(['Kevin', 'van', 'Zonneveld'], 2);
+      //   returns 1: [['Kevin', 'van'], ['Zonneveld']]
+      //   example 2: array_chunk(['Kevin', 'van', 'Zonneveld'], 2, true);
+      //   returns 2: [{0:'Kevin', 1:'van'}, {2: 'Zonneveld'}]
+      //   example 3: array_chunk({1:'Kevin', 2:'van', 3:'Zonneveld'}, 2);
+      //   returns 3: [['Kevin', 'van'], ['Zonneveld']]
+      //   example 4: array_chunk({1:'Kevin', 2:'van', 3:'Zonneveld'}, 2, true);
+      //   returns 4: [{1: 'Kevin', 2: 'van'}, {3: 'Zonneveld'}]
+
+      var x, p = '',
+        i = 0,
+        c = -1,
+        l = input.length || 0,
+        n = [];
+
+      if (size < 1) {
+        return null;
+      }
+
+      if (Object.prototype.toString.call(input) === '[object Array]') {
+        if (preserve_keys) {
+          while (i < l) {
+            (x = i % size) ? n[c][i] = input[i] : n[++c] = {}, n[c][i] = input[i];
+            i++;
+          }
+        } else {
+          while (i < l) {
+            (x = i % size) ? n[c][x] = input[i] : n[++c] = [input[i]];
+            i++;
+          }
+        }
+      } else {
+        if (preserve_keys) {
+          for (p in input) {
+            if (input.hasOwnProperty(p)) {
+              (x = i % size) ? n[c][p] = input[p] : n[++c] = {}, n[c][p] = input[p];
+              i++;
+            }
+          }
+        } else {
+          for (p in input) {
+            if (input.hasOwnProperty(p)) {
+              (x = i % size) ? n[c][x] = input[p] : n[++c] = [input[p]];
+              i++;
+            }
+          }
+        }
+      }
+      return n;
     }
 
 });
