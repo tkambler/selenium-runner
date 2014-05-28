@@ -5,16 +5,24 @@ var SeleniumRunner = require('./index'),
 seleniumRunner = new SeleniumRunner({
     'local': {
         'url': 'http://google.com',
-        'host': '127.0.0.1',
-        'port': 4444,
+        'host': 'ondemand.saucelabs.com',
+        'port': 80,
+        'username': null,
+        'access_key': null,
         'browsers': [
             {
-                'browserName': 'Chrome'
+                'platform': 'Windows 7',
+                'browserName': 'Firefox',
+                'browserVersion': '29'
             }
         ]
     },
     'test_dir': __dirname + '/example/tests',
-    'plugin_dir': __dirname + '/example/plugins'
+    'plugin_dir': __dirname + '/example/plugins',
+    'sauce': {
+        'username': null,
+        'password': null
+    }
 });
 
 seleniumRunner.run('local', function(result) {

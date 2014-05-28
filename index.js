@@ -1,6 +1,8 @@
 var _ = require('underscore'),
     path = require('path'),
     fs = require('fs'),
+    SauceLabs = require('saucelabs'),
+    async = require('async'),
     moment = require('moment'),
     Pace = require('pace'),
     glob = require('glob');
@@ -68,6 +70,14 @@ _.extend(SeleniumRunner.prototype, {
             soloTest = null;
         }
 
+        this.api = null;
+        if (this._options.sauce && this._options.sauce.username && this._options.sauce.password) {
+            this.api = new SauceLabs({
+                'username': this._options.sauce.username,
+                'password': this._options.sauce.password
+            });
+        }
+
         var start_ts = moment().unix();
 
         var wdSync = require('wd-sync'),
@@ -100,18 +110,52 @@ _.extend(SeleniumRunner.prototype, {
         });
 
         var done = function() {
+
             var end_ts = moment().unix(),
                 diff = end_ts - start_ts,
-                elapsed = moment.duration(end_ts - start_ts).humanize();
-            var finalResult = {
-                'total_tests': totalTestCount,
-                'total_browsers': totalBrowserCount,
-                'elapsed_time': elapsed,
-                'results': results
-            };
-            if (_.isFunction(fn)) {
-                fn(finalResult);
+                elapsed = moment.duration(end_ts - start_ts).humanize(),
+                tasks = [];
+
+            if (self.api) {
+
+                _.each(results, function(suite, sk) {
+                    _.each(suite, function(tests, tk) {
+                        _.each(tests, function(test, tk2) {
+                            tasks.push(function(cb) {
+
+                                self.api.showJob(test.session_id, function(err, job) {
+                                    if (err) {
+                                        return cb(err);
+                                    }
+                                    self.api.createPublicLink(job.id, function(err, link) {
+                                        if (err) {
+                                            return cb(err);
+                                        }
+                                        test.public_link = link;
+                                        tests[tk2] = test;
+                                        cb();
+                                    });
+                                });
+
+                            });
+                        });
+                    });
+                });
+
             }
+
+            async.parallel(tasks, function(err, data) {
+                var finalResult = {
+                    'total_tests': totalTestCount,
+                    'total_browsers': totalBrowserCount,
+                    'elapsed_time': elapsed,
+                    'results': results
+                };
+                if (_.isFunction(fn)) {
+                    fn(finalResult);
+                }
+            });
+
         };
 
         var pace = Pace(totalTestCount);
@@ -146,7 +190,8 @@ _.extend(SeleniumRunner.prototype, {
     '_processTest': function(step, url, soloTest, results, browser, browserSettings, suite) {
         var test = require(step),
             baseName = path.basename(step).replace('.js', ''),
-            entry;
+            entry,
+            self = this;
         if (soloTest && baseName !== soloTest) {
             return;
         }
@@ -190,8 +235,19 @@ _.extend(SeleniumRunner.prototype, {
         if (!results[suite.name][baseName]) {
             results[suite.name][baseName] = [];
         }
-        results[suite.name][baseName].push(entry);
-        browser.quit();
+
+        var done = function() {
+            results[suite.name][baseName].push(entry);
+            browser.quit();
+        };
+
+        if (self.api) {
+            entry.session_id = browser.getSessionId();
+            done();
+        } else {
+            done();
+        }
+
     },
 
     '_getTestFiles': function() {
@@ -246,6 +302,22 @@ _.extend(SeleniumRunner.prototype, {
             args = args[0];
         }
         console.log(args);
+    },
+
+    '_randomString': function(length) {
+        if (!length) {
+            length = 10;
+        }
+        var result = '',
+            chars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        for (var i = length; i > 0; --i) {
+            result += chars[Math.round(Math.random() * (chars.length - 1))];
+        }
+        return result;
+    },
+
+    '_generateTestName': function() {
+        return 'test_' + moment().unix() + '_' + randomString();
     }
 
 });
