@@ -1,5 +1,7 @@
 # What is this?
 
+**Note:** This project is no longer maintained. If you would like to take it over, let me know - I'll transfer it to you.
+
 > "No callbacks. No promise chains. Just pure and simple clarity."
 
 This library provides a simple, repeatable pattern for writing and running [Selenium](http://docs.seleniumhq.org/) tests within Node that are **synchronous** in nature. No callbacks. No promise chains. Just pure and simple clarity.
